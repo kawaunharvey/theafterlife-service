@@ -1,0 +1,120 @@
+// ---------------------- Ledger Domain Enums ------------------
+
+enum LedgerCollaboratorRole {
+    OWNER
+    EDITOR
+    VIEWER
+}
+
+enum LedgerStatusUpdateType {
+    LEDGER_CREATED
+    BLOCK_CREATED
+    BLOCK_VERSIONED
+    COLLABORATOR_ADDED
+    COLLABORATOR_REMOVED
+    COLLABORATOR_ROLE_CHANGED
+    USER_NOTE
+}
+
+model Ledger {
+    id          String  @id @default(auto()) @map("_id") @db.ObjectId
+    ownerUserId String  @db.ObjectId
+    // owner       User    @relation(name: "LedgerOwner", fields: [ownerUserId], references: [id])
+    title       String?
+    description String?
+
+    archivedAt DateTime?
+    createdAt  DateTime  @default(now())
+    updatedAt  DateTime  @updatedAt
+
+    // Relations
+    collaborators LedgerCollaborator[] @relation(name: "LedgerCollaborators")
+    statusUpdates LedgerStatusUpdate[] @relation(name: "LedgerStatusUpdates")
+    blocks        LedgerBlock[]        @relation(name: "LedgerBlocks")
+
+    @@index([ownerUserId, createdAt])
+    @@index([archivedAt])
+}
+
+model LedgerBlock {
+    id          String    @id @default(auto()) @map("_id") @db.ObjectId
+    ledgerId    String    @db.ObjectId
+    ledger      Ledger    @relation(name: "LedgerBlocks", fields: [ledgerId], references: [id], onDelete: Cascade)
+    blockTypeId String    @db.ObjectId
+    blockType   BlockType @relation(name: "BlockTypeBlocks", fields: [blockTypeId], references: [id])
+
+    typeName      String
+    typeVersion   Int
+    payload       Json?
+    protected     Boolean?
+    source        String?
+    correlationId String?
+    parentBlockId String?       @db.ObjectId
+    parentBlock   LedgerBlock?  @relation("LedgerBlockParent", fields: [parentBlockId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+    children      LedgerBlock[] @relation("LedgerBlockParent")
+    checksum      String?
+    authorId      String        @db.ObjectId
+    authorHandle  String?
+    createdAt     DateTime      @default(now())
+    archivedAt    DateTime?
+
+    @@index([ledgerId, createdAt])
+    @@index([ledgerId, typeName, createdAt])
+    @@index([correlationId])
+    @@index([archivedAt])
+}
+
+model LedgerCollaborator {
+    id       String @id @default(auto()) @map("_id") @db.ObjectId
+    ledgerId String @db.ObjectId
+    ledger   Ledger @relation(name: "LedgerCollaborators", fields: [ledgerId], references: [id], onDelete: Cascade)
+
+    userId String                 @db.ObjectId
+    role   LedgerCollaboratorRole
+
+    // Who added this collaborator
+    addedByUserId String @db.ObjectId
+
+    addedAt   DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([ledgerId, userId]) // One role per user per ledger
+    @@index([userId])
+    @@index([ledgerId, role])
+}
+
+model LedgerStatusUpdate {
+    id       String @id @default(auto()) @map("_id") @db.ObjectId
+    ledgerId String @db.ObjectId
+    ledger   Ledger @relation(name: "LedgerStatusUpdates", fields: [ledgerId], references: [id], onDelete: Cascade)
+
+    type LedgerStatusUpdateType
+
+    // Actor metadata (from CurrentUser)
+    actorUserId String? @db.ObjectId // Null for system-generated updates
+    actorEmail  String?
+
+    // Human-readable message or structured data
+    message  String?
+    metadata Json? // Additional context (old/new values, etc.)
+
+    createdAt DateTime @default(now())
+
+    @@index([ledgerId, createdAt])
+    @@index([type, createdAt])
+}
+
+model BlockType {
+    id            String   @id @default(auto()) @map("_id") @db.ObjectId
+    name          String
+    version       Int
+    schemaSample  Json?
+    isSuggestable Boolean  @default(true)
+    description   String?
+    createdAt     DateTime @default(now())
+
+    blocks LedgerBlock[] @relation(name: "BlockTypeBlocks")
+
+    @@unique([name, version])
+    @@index([name])
+}

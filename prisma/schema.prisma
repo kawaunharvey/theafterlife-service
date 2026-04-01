@@ -1,0 +1,223 @@
+// ------------------------------------------------------------
+// Afterlife Service — Prisma Schema (MongoDB)
+// ALL relations explicitly named; enums deduped
+// Posts consolidated; Unified Feeds; Event comments enabled
+// ------------------------------------------------------------
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URI")
+}
+
+// GeoJSON Point composite type for MongoDB. Create a 2dsphere index on this field manually.
+type GeoPoint {
+  type        String  @default("Point")
+  coordinates Float[] // [longitude, latitude]
+}
+
+// ---------------------- Enums -------------------------------
+
+enum Visibility {
+  PUBLIC
+  UNLISTED
+  PRIVATE
+}
+
+enum MemorialStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  IN_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum ReviewDecision {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum FundraisingStatus {
+  ACTIVE
+  PAUSED
+  CLOSED
+}
+
+enum DonationStatus {
+  SUCCEEDED
+  REFUNDED
+  FAILED
+  PENDING
+}
+
+enum ContentFormat {
+  IMAGE
+  VIDEO
+  AUDIO
+  TEXT
+  STICKER
+  LIVESTREAM
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  MODERATION_HOLD
+  REMOVED
+}
+
+enum LivestreamState {
+  SCHEDULED
+  LIVE
+  ENDED
+  CANCELED
+}
+
+enum RSVPStatus {
+  GOING
+  MAYBE
+  NOT_GOING
+  WAITLISTED
+  CHECKED_IN
+}
+
+enum FollowTargetType {
+  USER
+  MEMORIAL
+}
+
+enum LikeTargetType {
+  MEMORY
+  COMMENT
+}
+
+enum CommentTargetType {
+  MEMORY
+  EVENT
+}
+
+enum FeedType {
+  MEMORIAL
+  USER
+  POST
+  CATEGORY
+  PROXIMITY
+  CUSTOM
+}
+
+enum FeedStatus {
+  ACTIVE
+  EXPIRED
+}
+
+enum FeedEventType {
+  IMPRESSION
+  OPEN
+  SCROLL
+  CLICK
+}
+
+enum FeedItemType {
+  MEMORIAL_UPDATE
+  FUNDRAISER_UPDATE
+  DONATION
+  OBITUARY_UPDATE
+  EVENT_NOTICE
+  AI_SUMMARY
+}
+
+enum DecoratorType {
+  SALUTATION
+  THEME
+  STICKER
+  BACKGROUND
+  ICON
+  PROMPT
+  RELATIONSHIP
+}
+
+enum DecoratorStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum FeedbackCategory {
+  PAYOUT_ISSUE
+  MEMORIAL_ISSUE
+  DONATION_ISSUE
+  BUG
+  CONTENT_ISSUE
+  PRODUCT_FEEDBACK
+  POSITIVE_FEEDBACK
+  OTHER
+}
+
+enum FeedbackSentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}
+
+enum FeedbackSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum FeedbackStatus {
+  NEW
+  IN_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+enum FeedbackSource {
+  WEB
+  MOBILE
+  SUPPORT_AGENT
+  SYSTEM
+}
+
+enum FeedbackChannel {
+  IN_APP_FORM
+  EMAIL_IMPORT
+  SUPPORT_API
+  OTHER
+}
+
+enum EventTemplateType {
+  LEDGER
+  MAP
+}
+
+type GeoJsonPoint {
+  type        String  @default("Point")
+  coordinates Float[]
+}
+
+model Location {
+  id               String        @id @default(auto()) @map("_id") @db.ObjectId
+  googlePlaceId    String?
+  formattedAddress String?
+  type             String // "RESTING_PLACE" | "AFTERLIFE" | "AR_VIGIL" | etc.
+  lat              Float?
+  lng              Float?
+  city             String?
+  state            String?
+  point            GeoJsonPoint?
+  country          String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  memories         Memory[]      @relation(name: "MemoryLocation")
+  memorials        Memorial[]
+}

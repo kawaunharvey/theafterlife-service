@@ -1,0 +1,269 @@
+// ---------------------- Artifacts ---------------------------
+
+enum ArtifactType {
+    IMAGE
+    VIDEO
+    NEWS_ARTICLE
+    AUDIO
+    DOCUMENT
+}
+
+enum ArtifactContextStatus {
+    PENDING
+    PROCESSING
+    COMPLETE
+    FAILED
+}
+
+model Artifact {
+    id            String                @id @default(auto()) @map("_id") @db.ObjectId
+    memoryId      String                @db.ObjectId
+    memory        Memory                @relation(name: "MemoryArtifacts", fields: [memoryId], references: [id])
+    memorialId    String                @db.ObjectId
+    type          ArtifactType
+    assetId       String?
+    url           String?
+    aspectRatio   Float?
+    durationMs    Int?
+    context       String?               // AI-generated contextual description (populated by background job)
+    contextStatus ArtifactContextStatus @default(PENDING)
+    createdAt     DateTime              @default(now())
+    updatedAt     DateTime              @updatedAt
+
+    @@index([memoryId])
+    @@index([memorialId])
+    @@index([contextStatus])
+}
+
+// ---------------------- Memorials ---------------------------
+
+model Memorial {
+    id                    String                 @id @default(auto()) @map("_id") @db.ObjectId
+    slug                  String                 @unique
+    shortId               String?                @unique
+    ownerUserId           String
+    displayName           String
+    coverAssetUrl         String?
+    coverAssetId          String?                @db.ObjectId
+    salutation            String?                @default("In Loving Memory")
+    salutationDecoratorId String?                @db.ObjectId
+    yearOfBirth           Int?
+    yearOfPassing         Int?
+    theme                 String?                @default("default")
+    themeDecoratorId      String?                @db.ObjectId
+    locationId            String?                @db.ObjectId
+    location              Location?              @relation(fields: [locationId], references: [id])
+    point                 GeoJsonPoint?
+    tags                  String[]
+    visibility            Visibility             @default(PUBLIC)
+    status                MemorialStatus         @default(ACTIVE)
+    verificationStatus    VerificationStatus     @default(UNVERIFIED)
+    iosAppUrl             String?
+    androidAppUrl         String?
+    shareUrl              String?
+    shortUrl              String?
+    // Obituary regeneration debounce (LTV only)
+    pendingRegeneration Boolean   @default(false)
+    lastMemoryAt        DateTime?
+
+    createdAt             DateTime               @default(now())
+    updatedAt             DateTime               @updatedAt
+    archivedAt            DateTime?
+    memories              Memory[]               @relation(name: "MemorialMemories")
+    relationships         MemorialRelationship[] @relation(name: "MemorialRelationshipMemorial")
+    liveObituaries        LiveObituary[]         @relation(name: "MemorialLiveObituaries")
+    anchors               MemoryAnchor[]         @relation(name: "MemorialAnchors")
+
+    @@index([displayName])
+    @@index([verificationStatus, status])
+    @@index([locationId])
+    @@index([themeDecoratorId])
+}
+
+// ---------------------- Memories ----------------------------
+
+type BaseMedia {
+    mediaType     String // "image" | "video"
+    assetId       String
+    url           String
+    aspectRatio   Float?
+    durationMs    Int?
+    parentAssetId String?
+}
+
+model Memory {
+    id                String                   @id @default(auto()) @map("_id") @db.ObjectId
+    memorialId        String                   @db.ObjectId
+    memorial          Memorial                 @relation(name: "MemorialMemories", fields: [memorialId], references: [id])
+    authorUserId      String                   @db.ObjectId
+    author            User                     @relation(name: "UserMemories", fields: [authorUserId], references: [id])
+    relationship      MemorialRelationshipKind
+    body              String // "Tell us about a time when…" response (required)
+    prompt            String? // Prompt variant shown to user
+    promptDecoratorId String?                  @db.ObjectId
+    media             BaseMedia[] // Optional photo/video attachments
+    locationId        String?                  @db.ObjectId
+    location          Location?                @relation(name: "MemoryLocation", fields: [locationId], references: [id])
+    point             GeoJsonPoint // Current drifting position
+    homePoint         GeoJsonPoint? // Creator's location at creation time — drift territory center (null for legacy records)
+    anchorId          String?      @db.ObjectId // null = free drift; set = pulled toward this anchor
+    visibility        Visibility               @default(PUBLIC)
+    status            PostStatus               @default(PUBLISHED)
+    publishedAt       DateTime                 @default(now())
+    discoveries       MemoryDiscovery[]        @relation(name: "MemoryDiscoveries")
+    artifacts         Artifact[]               @relation(name: "MemoryArtifacts")
+    createdAt         DateTime                 @default(now())
+    updatedAt         DateTime                 @updatedAt
+
+    @@index([memorialId, publishedAt])
+    @@index([authorUserId])
+    @@index([status, publishedAt])
+}
+
+// ---------------------- Memory Anchors ----------------------
+
+model MemoryAnchor {
+    id          String   @id @default(auto()) @map("_id") @db.ObjectId
+    memorialId  String   @db.ObjectId
+    memorial    Memorial @relation(name: "MemorialAnchors", fields: [memorialId], references: [id])
+    ownerUserId String   @db.ObjectId
+    point       GeoJsonPoint
+    isActive    Boolean  @default(true)
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    @@index([memorialId, isActive])
+}
+
+model MemoryDiscovery {
+    id           String   @id @default(auto()) @map("_id") @db.ObjectId
+    userId       String   @db.ObjectId
+    memoryId     String   @db.ObjectId
+    memory       Memory   @relation(name: "MemoryDiscoveries", fields: [memoryId], references: [id])
+    discoveredAt DateTime @default(now())
+
+    @@unique([userId, memoryId])
+    @@index([userId])
+    @@index([memoryId])
+}
+
+model Follow {
+    id String @id @default(auto()) @map("_id") @db.ObjectId
+
+    userId String @db.ObjectId
+    user   User   @relation(name: "UserFollows", fields: [userId], references: [id])
+
+    targetType    FollowTargetType // USER | MEMORIAL
+    targetId      String           @db.ObjectId
+    notifications String?
+
+    createdAt DateTime @default(now())
+
+    @@unique([userId, targetType, targetId])
+    @@index([targetType, targetId])
+}
+
+model Like {
+    id String @id @default(auto()) @map("_id") @db.ObjectId
+
+    userId String @db.ObjectId
+    user   User   @relation(name: "UserLikes", fields: [userId], references: [id])
+
+    targetType LikeTargetType // MEMORY
+    targetId   String         @db.ObjectId // Memory.id
+
+    createdAt DateTime @default(now())
+
+    @@unique([userId, targetType, targetId])
+    @@index([targetType, targetId])
+}
+
+model Comment {
+    id String @id @default(auto()) @map("_id") @db.ObjectId
+
+    authorUserId String @db.ObjectId
+    author       User   @relation(name: "UserComments", fields: [authorUserId], references: [id])
+
+    targetType CommentTargetType // MEMORY | EVENT
+    targetId   String            @db.ObjectId // Memory.id or Event.id
+
+    body      String
+    status    String   @default("VISIBLE") // or MODERATED/REMOVED
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    parentCommentId String? @db.ObjectId
+
+    @@index([targetType, targetId, createdAt])
+    @@index([authorUserId, createdAt])
+}
+
+enum MemorialRelationshipKind {
+    IMMEDIATE_FAMILY // spouse, parent, child, sibling
+    EXTENDED_FAMILY // aunt, uncle, cousin, in-law
+    PARTNER // non-married partner
+    FRIEND
+    COLLEAGUE // coworker, professional connection
+    COMMUNITY // church member, neighbor, org member
+    CAREGIVER // nurse, aide, hospice, guardian
+    OTHER
+}
+
+model MemorialRelationship {
+    id String @id @default(auto()) @map("_id") @db.ObjectId
+
+    memorialId String   @db.ObjectId
+    memorial   Memorial @relation(name: "MemorialRelationshipMemorial", fields: [memorialId], references: [id])
+
+    userId String @db.ObjectId
+    user   User   @relation(name: "MemorialRelationshipUser", fields: [userId], references: [id])
+
+    relationship MemorialRelationshipKind
+    qualifier    String[] // e.g. "sister", "mother", etc.
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([memorialId, userId])
+    @@index([memorialId])
+    @@index([userId])
+}
+
+// ---------------------- Live Obituaries -----------------
+
+enum LiveObituaryStatus {
+    PENDING
+    GENERATED
+    PROVISIONAL
+    EXCLUDED
+}
+
+model LiveObituary {
+    id               String                   @id @default(auto()) @map("_id") @db.ObjectId
+    memorialId       String                   @db.ObjectId
+    memorial         Memorial                 @relation(name: "MemorialLiveObituaries", fields: [memorialId], references: [id])
+    relationshipKind MemorialRelationshipKind
+    plainText        String
+    blocks           Json
+    memoryCount      Int                      @default(0)
+    status           LiveObituaryStatus       @default(PENDING)
+    pecConfidence    Float?
+    pecChecks        Json?
+    generatedAt      DateTime                 @default(now())
+    updatedAt        DateTime                 @updatedAt
+
+    @@unique([memorialId, relationshipKind])
+    @@index([memorialId])
+}
+
+// ---------------------- Decorators -------------------------
+model Decorator {
+    id             String        @id @default(auto()) @map("_id") @db.ObjectId
+    type           DecoratorType
+    label          String
+    textValue      String
+    metadata       Json?
+    collectionSlug String?
+    createdAt      DateTime      @default(now())
+    updatedAt      DateTime      @updatedAt
+}

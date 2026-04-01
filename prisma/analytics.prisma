@@ -1,0 +1,47 @@
+// ------------------------------------------------------------
+// Afterlife Service — Prisma Schema (MongoDB)
+// Analytics schema content can live here alongside other models.
+// ------------------------------------------------------------
+
+model AuditLog {
+    id          String   @id @default(auto()) @map("_id") @db.ObjectId
+    subjectType String // "Memorial" | "Post" | "Event" | ...
+    subjectId   String
+    actorUserId String?
+    action      String
+    payload     Json?
+    createdAt   DateTime @default(now())
+
+    @@index([subjectType, subjectId, createdAt])
+}
+
+// // track impressions
+// model Impression {
+//     id         String   @id @default(auto()) @map("_id") @db.ObjectId
+//     targetType String // "Post" | "Event" | "Memorial" | ...
+//     targetId   String
+//     userId     String?  @db.ObjectId
+//     sessionId  String?
+//     source     String? // "FEED", "SEARCH", "NOTIFICATION", etc.
+//     createdAt  DateTime @default(now())
+
+//     @@index([targetType, targetId, createdAt])
+//     @@index([userId, createdAt])
+//     @@index([sessionId, createdAt])
+// }
+
+// track interactions (likes, comments, shares, etc.)
+model Interaction {
+    id         String   @id @default(auto()) @map("_id") @db.ObjectId
+    type       String // "LIKE" | "COMMENT" | "SHARE" | ...
+    targetType String // "Post" | "Event" | "Memorial" | ...
+    targetId   String
+    userId     String   @db.ObjectId
+    sessionId  String?
+    payload    Json? // e.g. { commentId: "...", shareMessage: "..." }
+    createdAt  DateTime @default(now())
+
+    @@index([type, targetType, targetId, createdAt])
+    @@index([userId, createdAt])
+    @@index([sessionId, createdAt])
+}

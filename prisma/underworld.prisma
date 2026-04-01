@@ -1,0 +1,262 @@
+// Cached Google Places snapshot; may be refreshed or cleared without touching Business core fields.
+type GooglePlaceSnapshot {
+    name               String?
+    formattedAddress   String?
+    internationalPhone String?
+    website            String?
+    location           GeoPoint?
+    viewport           Json?
+    categories         String[]
+    rating             Float?
+    userRatingsTotal   Int?
+    openingHours       Json?
+    priceLevel         Int?
+    utcOffsetMinutes   Int?
+    cachedAt           DateTime
+    expiresAt          DateTime
+}
+
+enum Urgency {
+    low
+    medium
+    high
+}
+
+enum ModerationStatus {
+    PENDING
+    APPROVED
+    REJECTED
+}
+
+enum TaxonomyKind {
+    DTE // Death-Triggering Event (e.g., DTE_UNEXPECTED_DEATH)
+    CATEGORY // Business category (e.g., CAT_FUNERAL_HOME)
+    TAG // Business attribute (e.g., TAG_OPEN_24_7)
+    SERVICE // Service offering (e.g., SVC_CREMATION)
+    INTENT // User intent (e.g., INTENT_IMMEDIATE_ARRANGEMENTS)
+}
+
+model TaxonomyNode {
+    id          String         @id @default(auto()) @map("_id") @db.ObjectId
+    key         String         @unique // "DTE_UNEXPECTED_DEATH", "TAG_OPEN_24_7", "CAT_FUNERAL_HOME"
+    kind        TaxonomyKind
+    name        String
+    description String?
+    group       String? // For UI grouping (e.g., "Hours", "Group Dining")
+    parentId    String?        @db.ObjectId
+    parent      TaxonomyNode?  @relation("TaxonomyHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+    children    TaxonomyNode[] @relation("TaxonomyHierarchy")
+
+    aliases TaxonomyAlias[]
+
+    // Rich metadata for AI use
+    metadata Json? // { urgencyLevel: "high", typicalDuration: "1-2 hours", externalPlaceTypes: ["funeral_home"] }
+
+    businessIds String[]   @db.ObjectId
+    businesses  Business[] @relation("BusinessTaxonomies", fields: [businessIds], references: [id])
+
+    places Place[] @relation("PlaceTaxonomy")
+
+    isActive  Boolean  @default(true)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([kind, isActive])
+    @@index([parentId])
+}
+
+enum AliasStatus {
+    PAUSED
+    RUNNING
+}
+
+model TaxonomyAlias {
+    id         String       @id @default(auto()) @map("_id") @db.ObjectId
+    taxonomyId String       @db.ObjectId
+    taxonomy   TaxonomyNode @relation(fields: [taxonomyId], references: [id], onDelete: Cascade)
+    label      String // human-friendly label
+    status     AliasStatus  @default(PAUSED)
+    createdAt  DateTime     @default(now())
+}
+
+model Place {
+    id String @id @default(auto()) @map("_id") @db.ObjectId
+
+    claimed       Boolean @default(false) // Whether a business has claimed this place
+    googlePlaceId String  @unique
+
+    business   Business? @relation("PlaceBusiness", fields: [businessId], references: [id])
+    businessId String?   @db.ObjectId // Many places can belong to one business
+
+    googleSnapshot        GooglePlaceSnapshot?
+    googleSnapshotVersion Int                  @default(0)
+    snapshotRefreshJobAt  DateTime?
+    snapshotRefreshStatus String?
+
+    latitude      Float?
+    longitude     Float?
+    locationPoint GeoPoint? // GeoJSON Point { type: "Point", coordinates: [lng, lat] }
+
+    taxonomyId String?       @db.ObjectId
+    taxonomy   TaxonomyNode? @relation("PlaceTaxonomy", fields: [taxonomyId], references: [id])
+
+    @@index([googleSnapshot.expiresAt])
+    @@index([taxonomyId])
+}
+
+type BusinessLink {
+    url   String
+    label String?
+}
+
+model Business {
+    id     String  @id @default(auto()) @map("_id") @db.ObjectId
+    places Place[] @relation("PlaceBusiness") // One business can have multiple places
+
+    // coords
+    latitude      Float?
+    longitude     Float?
+    locationPoint GeoPoint? // GeoJSON Point { type: "Point", coordinates: [lng, lat] }
+
+    // ALL attributes via taxonomy (categories, tags, services)
+    taxonomyIds String[]       @db.ObjectId
+    taxonomies  TaxonomyNode[] @relation("BusinessTaxonomies", fields: [taxonomyIds], references: [id])
+
+    // Core info
+    claimed      Boolean        @default(false)
+    name         String?
+    description  String?
+    phone        String?
+    addressLine1 String?
+    addressLine2 String?
+    city         String?
+    state        String?
+    postalCode   String?
+    country      String?
+    links        BusinessLink[]
+    photos       String[]
+
+    // Operational details
+    operatingHours Json? // { monday: { open: "09:00", close: "17:00" }, ... }
+    capacity       Int? // Max party size
+
+    // Moderation
+    moderationStatus ModerationStatus @default(PENDING)
+    moderationNotes  String?
+    isActive         Boolean          @default(true)
+
+    // Reputation (from reviews)
+    reputationScore     Float? // aggregated reputation score (0-100)
+    reputationTraits    Json? // aggregated trait signals with support/confidence
+    reputationUpdatedAt DateTime?
+
+    // Provider account linking
+    providerAccountId String? // Link to Crownworks provider account
+
+    isPrimary Boolean @default(false)
+
+    // Timestamps
+    deployedAt DateTime @default(now()) // when the business was deployed from crownworks platform
+    updatedAt  DateTime @updatedAt
+
+    // reviews Review[]
+
+    @@index([moderationStatus])
+    @@index([isActive])
+    @@index([latitude, longitude])
+    @@index([taxonomyIds])
+    @@index([providerAccountId])
+}
+
+model Blueprint {
+    id            String @id @default(auto()) @map("_id") @db.ObjectId
+    schemaVersion String @default("3.0.0")
+
+    parseId    String
+    rawInput   String
+    dteKeys    String[]
+    intentKeys String[]
+    userLat    Float?
+    userLng    Float?
+    phases     Json[] // BuildPhase[] embedded
+
+    expiresAt DateTime // 7-day TTL
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([parseId])
+    @@index([expiresAt])
+}
+
+enum ResourceKind {
+    travel
+    moving
+    legal
+    financial
+    inapp
+}
+
+enum ResourceType {
+    EXTERNAL_URL
+    INAPP_ACTION
+    INAPP_DEEPLINK
+}
+
+model ResourceTemplate {
+    id             String       @id @default(auto()) @map("_id") @db.ObjectId
+    intentKey      String
+    source         String
+    label          String
+    resourceType   ResourceType @default(EXTERNAL_URL)
+    urlTemplate    String?
+    actionKey      String?
+    actionParams   String?
+    deeplink       String?
+    deeplinkParams String?
+    kind           ResourceKind
+    isActive       Boolean      @default(true)
+    createdAt      DateTime     @default(now())
+    updatedAt      DateTime     @updatedAt
+
+    @@index([intentKey, isActive])
+    @@index([resourceType])
+}
+
+enum ActionAssigneeKind {
+    organizer
+    family_member
+    anyone
+}
+
+enum ActionPriority {
+    critical
+    high
+    medium
+    low
+}
+
+model Action {
+    id                  String             @id @default(auto()) @map("_id") @db.ObjectId
+    intentKey           String
+    title               String // verb-led, <=10 words, may contain {event.city}/{event.state}
+    defaultAssignee     ActionAssigneeKind
+    priority            ActionPriority
+    phaseHint           String // "0-24h" | "24-72h" | "1-2 weeks" | "ongoing"
+    dependsOnIntentKeys String[] // INTENT_ key strings - sole source of dep ordering
+    taxonomies          String[] // CAT_/TAG_ keys driving /enrich provider matching
+    resourceKind        String? // "travel" | "moving" | "legal" | "financial"
+    locale              String             @default("") // "" = universal; "US", "GB", etc.
+    isActive            Boolean            @default(true)
+
+    // PEC columns - present, logic deferred (not wired)
+    pecScore    Float?
+    validatedAt DateTime?
+    useCount    Int       @default(0)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([intentKey, locale])
+    @@index([intentKey, isActive])
+    @@index([locale])
+}

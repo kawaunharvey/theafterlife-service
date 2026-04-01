@@ -1,0 +1,19 @@
+// ── PEC (Prediction Error Correction) ────────────────────────────────────────
+// One document per entity (provider or memorial).
+// validated / provisional / flagged are JSON arrays of MemoryEntry objects.
+// lensIndex is a JSON map of AudienceLens → string[] (MemoryEntry IDs).
+
+model ContextStore {
+    id          String   @id @default(auto()) @map("_id") @db.ObjectId
+    entityId    String
+    entityType  String   // 'provider' | 'memorial'
+    validated   Json     @default("[]")
+    provisional Json     @default("[]")
+    flagged     Json     @default("[]")
+    lensIndex   Json     @default("{}")
+    lastUpdated DateTime @updatedAt
+    version     Int      @default(0)
+
+    @@unique([entityId, entityType])
+    @@index([entityId])
+}

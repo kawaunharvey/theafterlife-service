@@ -1,0 +1,122 @@
+model User {
+    id          String    @id @default(auto()) @map("_id") @db.ObjectId
+    email       String    @unique
+    name        String?
+    dateOfBirth DateTime? @default(now()) // for age-restricted content
+    handle      String?   @unique @default(cuid())
+    imageUrl    String?
+    status      String    @default("ACTIVE")
+    roles       String[]
+    lastLogin   DateTime?
+
+    // Subscription entitlement
+    entitlement          String    @default("memorial_free") // "memorial_free" | "memorial_lifetime"
+    foundingMember       Boolean   @default(false)
+    discoveryRangeMeters Int       @default(375)
+    anchorLimit          Int       @default(0)
+    purchasedAt          DateTime?
+
+// ledgers     Ledger[]  @relation(name: "LedgerOwner", fields: [id], references: [ownerUserId])
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // relations
+    sessions      Session[]              @relation(name: "UserSessions")
+    follows       Follow[]               @relation(name: "UserFollows")
+    likes         Like[]                 @relation(name: "UserLikes")
+    comments      Comment[]              @relation(name: "UserComments")
+    memories      Memory[]               @relation(name: "UserMemories")
+    relationships MemorialRelationship[] @relation(name: "MemorialRelationshipUser")
+}
+
+model Session {
+    id     String @id @default(auto()) @map("_id") @db.ObjectId
+    userId String @db.ObjectId
+    user   User   @relation(name: "UserSessions", fields: [userId], references: [id])
+
+    token      String   @unique
+    expiresAt  DateTime
+    userAgent  String?
+    ip         String?
+    deviceType String?
+    deviceName String?
+
+    createdAt DateTime @default(now())
+
+    @@index([userId, expiresAt])
+}
+
+/**
+ * Internal webhooks for system event notifications
+ * Allows external systems to subscribe to updates on TaxonomyNodes, TaxonomyAlias, and Business records
+ */
+model InternalWebhook {
+    id            String   @id @default(auto()) @map("_id") @db.ObjectId
+    url           String // Webhook endpoint URL
+    events        String[] @default([]) // Event types to subscribe to; empty = all events
+    signingSecret String // HMAC-SHA256 signing secret for request verification
+    description   String?
+
+    isActive Boolean @default(true)
+
+    // Delivery tracking
+    lastDeliveredAt DateTime?
+    lastFailureAt   DateTime?
+    failureCount    Int       @default(0)
+    successCount    Int       @default(0)
+
+    deliveryLogs WebhookDeliveryLog[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([isActive, events])
+    @@index([createdAt])
+}
+
+/**
+ * Webhook delivery attempt logs for debugging and monitoring
+ */
+model WebhookDeliveryLog {
+    id        String          @id @default(auto()) @map("_id") @db.ObjectId
+    webhookId String          @db.ObjectId
+    webhook   InternalWebhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+    deliveryId String // Unique ID for this delivery attempt
+    eventType  String // Event type that was delivered
+    status     String @default("pending") // pending, delivered, failed, retrying
+
+    statusCode   Int?
+    errorMessage String?
+    responseTime Int? // Response time in milliseconds
+    attempt      Int       @default(1)
+    maxAttempts  Int       @default(5)
+    nextRetryAt  DateTime?
+
+    deliveredAt DateTime?
+    createdAt   DateTime  @default(now())
+
+    @@index([webhookId, status])
+    @@index([deliveryId])
+    @@index([createdAt])
+}
+
+/**
+ * API Key access. keys will be stored in database and used for authenticating requests to internal APIs. Each key can have specific permissions and rate limits.
+ */
+model ApiKey {
+    id          String   @id @default(auto()) @map("_id") @db.ObjectId
+    key         String   @unique // The API key value (hashed for security)
+    name        String // A human-readable name for the key
+    description String? // Optional description of the key's purpose
+    permissions String[] // List of permissions/scopes associated with this key
+    rateLimit   Int      @default(1000) // Max requests per day
+
+    isActive Boolean @default(true)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([isActive])
+}

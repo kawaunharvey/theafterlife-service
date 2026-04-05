@@ -21,7 +21,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Generate Prisma client (no db push — that requires a live DB)
-RUN yarn prisma:push
+RUN yarn prisma:generate
 
 # Compile TypeScript
 RUN npx nest build
@@ -44,4 +44,4 @@ COPY package.json yarn.lock .yarnrc.yml ./
 EXPOSE 3000
 
 # Push schema to DB then start (prisma db push is idempotent for MongoDB)
-CMD npx prisma db push --skip-generate && node dist/main.js
+CMD yarn prisma:push --skip-generate && node dist/main.js

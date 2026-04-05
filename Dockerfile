@@ -41,6 +41,8 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY package.json yarn.lock .yarnrc.yml prisma.config.ts ./
 
+RUN ls -l
+
 EXPOSE 3000
 
 # Push schema to DB then start (prisma db push is idempotent for MongoDB)

@@ -44,4 +44,4 @@ COPY package.json yarn.lock .yarnrc.yml prisma.config.ts ./
 EXPOSE 3000
 
 # Push schema to DB then start (prisma db push is idempotent for MongoDB)
-CMD yarn prisma:push && node dist/main.js
+CMD yarn prisma:push --skip-generate && yarn start

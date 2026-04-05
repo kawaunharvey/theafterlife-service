@@ -11,7 +11,7 @@
     "seed:blueprints": "tsx prisma/seeds/blueprint-nodes.seed.ts",
     "training:jsonl:parse": "tsx scripts/training/generate-parse-training-jsonl.ts",
     "lint": "biome check src --fix",
-    "build": "yarn prisma:generate && yarn prisma:push && nest build",
+    "build": "nest build",
     "start": "node ./dist/main.js"
   },
   "dependencies": {

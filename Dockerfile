@@ -41,7 +41,7 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY package.json yarn.lock .yarnrc.yml prisma.config.ts ./
 
-RUN ls -l
+RUN ls -l ./dist && ls -l ./prisma
 
 EXPOSE 3000
 

@@ -1,9 +1,6 @@
 {
   "name": "the-afterlife-service",
   "packageManager": "yarn@4.6.0",
-  "prisma": {
-    "schema": "prisma"
-  },
   "scripts": {
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",

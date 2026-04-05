@@ -1,5 +1,5 @@
 # ── Stage 1: Install dependencies ───────────────────────────────────────────
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 
 WORKDIR /app
 
@@ -10,7 +10,7 @@ COPY package.json yarn.lock .yarnrc.yml ./
 RUN yarn install --immutable
 
 # ── Stage 2: Build ───────────────────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -27,7 +27,7 @@ RUN DATABASE_URI="mongodb://placeholder:27017/placeholder" yarn prisma:generate
 RUN npx nest build
 
 # ── Stage 3: Production image ─────────────────────────────────────────────
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 
 WORKDIR /app
 
@@ -46,4 +46,4 @@ RUN ls -l ./dist && ls -l ./prisma
 EXPOSE 3000
 
 # Push schema to DB then start (prisma db push is idempotent for MongoDB)
-CMD yarn prisma:push --skip-generate && yarn start
+CMD yarn prisma:push --skip-generate && node dist/main.js

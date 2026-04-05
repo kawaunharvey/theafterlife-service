@@ -35,13 +35,11 @@ RUN corepack enable
 
 ENV NODE_ENV=production
 
-# Only copy what's needed to run
-COPY --from=deps /app/node_modules ./node_modules
+# Copy node_modules from builder (includes the prisma-generated client in .prisma/client)
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
 COPY package.json yarn.lock .yarnrc.yml prisma.config.ts ./
-
-RUN ls -l ./dist && ls -l ./prisma
 
 EXPOSE 3000
 

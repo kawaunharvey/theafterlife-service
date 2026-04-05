@@ -112,13 +112,8 @@ export class ContentServiceClient {
   private readonly logger = new Logger("ContentServiceClient");
   private readonly baseUrl: string;
   private readonly apiKey: string;
-  private readonly secretKey: string;
   private readonly maxRetries = 3;
   private readonly retryDelayMs = 1000;
-
-  // Token management
-  private accessToken: string | null = null;
-  private tokenExpiresAt: number | null = null;
 
   constructor(
     private httpService: HttpService,
@@ -129,10 +124,6 @@ export class ContentServiceClient {
       "http://localhost:8080",
     );
     this.apiKey = this.configService.get<string>("CONTENT_SERVICE_API_KEY", "");
-    this.secretKey = this.configService.get<string>(
-      "CONTENT_SERVICE_SECRET_KEY",
-      "",
-    );
   }
 
   /**
@@ -141,7 +132,7 @@ export class ContentServiceClient {
   async createSession(
     req: CreateSessionRequest,
   ): Promise<CreateSessionResponse> {
-    const headers = await this.getHeaders();
+    const headers = this.getHeaders();
     const rawResponse = await this.retryableRequest<RawCreateSessionResponse>(
       () =>
         this.httpService
@@ -171,7 +162,7 @@ export class ContentServiceClient {
     sessionId: string,
     req?: CompleteSessionRequest,
   ): Promise<CompleteSessionResponse> {
-    const headers = await this.getHeaders();
+    const headers = this.getHeaders();
     const rawResponse = await this.retryableRequest<RawCompleteSessionResponse>(
       () =>
         this.httpService
@@ -199,7 +190,7 @@ export class ContentServiceClient {
    * Get asset details from Content Service.
    */
   async getAsset(assetId: string): Promise<GetAssetResponse> {
-    const headers = await this.getHeaders();
+    const headers = this.getHeaders();
     return this.retryableRequest<GetAssetResponse>(
       () =>
         this.httpService
@@ -216,7 +207,7 @@ export class ContentServiceClient {
    * Get asset variants (thumbnails, encoded versions, etc).
    */
   async getAssetVariants(assetId: string): Promise<AssetVariantResponse[]> {
-    const headers = await this.getHeaders();
+    const headers = this.getHeaders();
     const response = await this.retryableRequest<AssetVariantResponse[]>(
       () =>
         this.httpService
@@ -366,61 +357,11 @@ export class ContentServiceClient {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  /**
-   * Get access token using service key authentication
-   */
-  private async getAccessToken(): Promise<string> {
-    // Check if we have a valid token
-    if (
-      this.accessToken &&
-      this.tokenExpiresAt &&
-      Date.now() < this.tokenExpiresAt
-    ) {
-      return this.accessToken;
-    }
-
-    try {
-      const response = await this.httpService
-        .post(
-          `${this.baseUrl}/v1/auth/service-login`,
-          {
-            apiKey: this.apiKey,
-            secretKey: this.secretKey,
-          },
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          },
-        )
-        .toPromise();
-
-      if (!response?.data) {
-        throw new Error("No response data from service token endpoint");
-      }
-
-      this.accessToken = response.data.access_token;
-      // Calculate expiration time (expires_in is in seconds)
-      this.tokenExpiresAt =
-        Date.now() + (response.data.expires_in || 86400) * 1000;
-
-      this.logger.debug("Content service access token obtained successfully");
-      return this.accessToken!;
-    } catch (error) {
-      this.logger.error(
-        "Failed to obtain access token from content service",
-        error,
-      );
-      throw error;
-    }
-  }
-
-  private async getHeaders() {
-    const token = await this.getAccessToken();
+  private getHeaders() {
     return {
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        "x-api-key": this.apiKey,
       },
     };
   }

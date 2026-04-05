@@ -18,6 +18,7 @@ import { AliasModule } from "./modules/alias/alias.module"
 import { MemorialsModule } from "@/modules/memorials/memorials.module"
 import { SubscriptionsModule } from "@/modules/subscriptions/subscriptions.module"
 import { FeedsModule } from "@/modules/feeds/feeds.module"
+import { ShareModule } from "./modules/share/share.module"
 
 @Module({
   imports: [
@@ -74,6 +75,7 @@ import { FeedsModule } from "@/modules/feeds/feeds.module"
     MemorialsModule,
     SubscriptionsModule,
     FeedsModule,
+    ShareModule
   ],
   controllers: [],
   providers: [],

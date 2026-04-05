@@ -25,6 +25,8 @@ import {
   CompleteUploadsResponseDto,
   GetAssetVariantsResponseDto,
 } from "./dto/upload.dto";
+import { UseJwtAuth } from "../auth/decorators/use-jwt-auth.decorator"
+import { UseApiKeyAuth } from "../auth/decorators/use-api-key-auth.decorator"
 
 @ApiTags("uploads")
 @Controller("uploads")

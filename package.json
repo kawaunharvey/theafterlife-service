@@ -12,7 +12,7 @@
     "training:jsonl:parse": "tsx scripts/training/generate-parse-training-jsonl.ts",
     "lint": "biome check src --fix",
     "build": "yarn prisma:generate && yarn prisma:push && nest build",
-    "start": "node dist/main.js"
+    "start": "node ./dist/main.js"
   },
   "dependencies": {
     "@langchain/core": "^1.1.29",

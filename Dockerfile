@@ -21,9 +21,9 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Generate Prisma client (no db push — that requires a live DB)
-RUN yarn prisma:generate
+RUN DATABASE_URI="mongodb://placeholder:27017/placeholder" yarn prisma:generate
 
-# Compile TypeScript
+# Compile TypeScript — call nest build directly to skip prisma:push
 RUN npx nest build
 
 # ── Stage 3: Production image ─────────────────────────────────────────────

@@ -21,7 +21,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Generate Prisma client (no db push — that requires a live DB)
-RUN npx prisma generate
+RUN yarn prisma:push
 
 # Compile TypeScript
 RUN npx nest build

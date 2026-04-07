@@ -1,0 +1,38 @@
+enum WaitlistStatus {
+    PENDING
+    VERIFIED
+    APPROVED
+}
+
+model WaitlistEntry {
+    id                String         @id @default(auto()) @map("_id") @db.ObjectId
+    email             String         @unique
+    name              String
+    referralCode      String         @unique
+    referredBy        String? // referral code of whoever invited this person
+    position          Int
+    verified          Boolean        @default(false)
+    verificationToken String?
+    approved          Boolean        @default(false)
+    status            WaitlistStatus @default(PENDING)
+    metadata          Json?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([referredBy])
+    @@index([status, createdAt])
+    @@index([position])
+}
+
+/// Settings singleton — always upserted with id="singleton"
+model WaitlistSettings {
+    id                String    @id @map("_id")
+    isOpen            Boolean   @default(true)
+    referralsEnabled  Boolean   @default(true)
+    headline          String?
+    signupWindowStart DateTime?
+    signupWindowEnd   DateTime?
+
+    updatedAt DateTime @updatedAt
+}

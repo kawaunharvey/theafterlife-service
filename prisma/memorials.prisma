@@ -12,7 +12,7 @@ enum ArtifactContextStatus {
     PENDING
     PROCESSING
     COMPLETE
-    FAILED
+    NEEDS_REVIEW
 }
 
 model Artifact {
@@ -25,7 +25,7 @@ model Artifact {
     url           String?
     aspectRatio   Float?
     durationMs    Int?
-    context       String?               // AI-generated contextual description (populated by background job)
+    context       Json?                 // Structured ArtifactContext JSON (populated by background job)
     contextStatus ArtifactContextStatus @default(PENDING)
     createdAt     DateTime              @default(now())
     updatedAt     DateTime              @updatedAt

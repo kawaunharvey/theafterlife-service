@@ -3,6 +3,7 @@ import { BullModule } from "@nestjs/bullmq";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { PrismaModule } from "@/prisma/prisma.module";
 import { PecModule } from "@/modules/pec/pec.module";
+import { CommonModule } from "@/common/common.module";
 import { Env } from "@/config/env";
 import { MemorialsController } from "./memorials.controller";
 import { MemorialsService } from "./memorials.service";
@@ -20,6 +21,7 @@ import { ObituaryRegenScheduler } from "./obituary-regen.scheduler";
   imports: [
     PrismaModule,
     PecModule,
+    CommonModule,
     BullModule.registerQueueAsync({
       name: "obituary-generation",
       imports: [ConfigModule],
@@ -27,7 +29,7 @@ import { ObituaryRegenScheduler } from "./obituary-regen.scheduler";
       useFactory: (config: ConfigService<Env, true>) => ({
         connection: {
           url: config.get("REDIS_URL", { infer: true }),
-          maxRetriesPerRequest: 2,
+          maxRetriesPerRequest: null,
         },
         defaultJobOptions: {
           attempts: 3,
@@ -42,11 +44,11 @@ import { ObituaryRegenScheduler } from "./obituary-regen.scheduler";
       useFactory: (config: ConfigService<Env, true>) => ({
         connection: {
           url: config.get("REDIS_URL", { infer: true }),
-          maxRetriesPerRequest: 2,
+          maxRetriesPerRequest: null,
         },
         defaultJobOptions: {
           attempts: 3,
-          backoff: { type: "exponential", delay: 5000 },
+          backoff: { type: "exponential", delay: 30000 },
         },
       }),
     }),

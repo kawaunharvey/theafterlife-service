@@ -81,7 +81,7 @@ export interface GetAssetResponse {
 
 export interface AssetVariantResponse {
   id: string;
-  variantType: "THUMBNAIL" | "TRANSCODE" | "PREVIEW" | "OPTIMIZED" | "COVER";
+  variantType: "THUMBNAIL" | "TRANSCODE" | "PREVIEW" | "OPTIMIZED" | "COVER" | "KEYFRAME" | "AUDIO_EXTRACT";
   mimeType: string;
   extension?: string;
   storagePath: string;

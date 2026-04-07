@@ -23,7 +23,7 @@ import {
       useFactory: (config: ConfigService<Env, true>) => ({
         connection: {
           url: config.get('REDIS_URL', { infer: true }),
-          maxRetriesPerRequest: 2,
+          maxRetriesPerRequest: null,
         },
         defaultJobOptions: {
           attempts: 3,

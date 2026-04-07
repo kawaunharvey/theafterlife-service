@@ -19,26 +19,42 @@ import { MemorialsModule } from "@/modules/memorials/memorials.module"
 import { SubscriptionsModule } from "@/modules/subscriptions/subscriptions.module"
 import { FeedsModule } from "@/modules/feeds/feeds.module"
 import { ShareModule } from "./modules/share/share.module"
+import { WaitlistModule } from "./modules/waitlist/waitlist.module"
+
+const isWatchMode = process.argv.includes("--watch");
+const isPrettyLogRequested = process.env.LOG_PRETTY === "true";
+const isPrettyLoggingEnabled =
+  process.env.NODE_ENV !== "production" || isWatchMode || isPrettyLogRequested;
 
 @Module({
   imports: [
     LoggerModule.forRoot({
       pinoHttp: {
-        level: process.env.NODE_ENV !== "production" ? "debug" : "info",
+        level: isPrettyLoggingEnabled ? "debug" : "info",
         transport:
-          process.env.NODE_ENV !== "production"
+          isPrettyLoggingEnabled
             ? {
                 target: "pino-pretty",
                 options: {
-                  singleLine: true,
+                  singleLine: false,
                   colorize: true,
                   levelFirst: true,
                   translateTime: "UTC:yyyy-mm-dd'T'HH:MM:ss.l'Z'",
-                  ignore: "pid,hostname,req.headers,res.headers",
+                  ignore: "pid,hostname,req.headers,res.headers,req.remoteAddress,req.remotePort",
                   messageFormat: "{msg}",
                 },
               }
             : undefined,
+        serializers: {
+          req: (req) => ({
+            id: req.id,
+            method: req.method,
+            url: req.url,
+          }),
+          res: (res) => ({
+            statusCode: res.statusCode,
+          }),
+        },
       },
     }),
     CacheModule.registerAsync({
@@ -75,7 +91,8 @@ import { ShareModule } from "./modules/share/share.module"
     MemorialsModule,
     SubscriptionsModule,
     FeedsModule,
-    ShareModule
+      ShareModule,
+      WaitlistModule,
   ],
   controllers: [],
   providers: [],

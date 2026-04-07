@@ -46,8 +46,16 @@ export const envSchema = z.object({
     .enum(["true", "false"])
     .default("true")
     .transform((v) => v === "true"),
+  ARTIFACT_CONTEXT_ENABLED: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((v) => v === "true"),
 
   SERVICE_PUBLIC_BASE_URL: z.string().url().optional(),
+  WAITLIST_API_BASE_URL: z.string().url().optional(),
+  WAITLIST_APP_BASE_URL: z.string().url().optional(),
+  WAITLIST_VERIFY_SUCCESS_REDIRECT_URL: z.string().url().optional(),
+  WAITLIST_VERIFY_FAILURE_REDIRECT_URL: z.string().url().optional(),
 
   // Blueprints
   BLUEPRINTS_ENABLE_INAPP_RESOURCES: z

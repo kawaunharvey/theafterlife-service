@@ -150,9 +150,9 @@ export class AssetVariantDto {
 
   @ApiProperty({
     description: "Type of variant",
-    enum: ["THUMBNAIL", "TRANSCODE", "PREVIEW", "OPTIMIZED", "COVER"],
+    enum: ["THUMBNAIL", "TRANSCODE", "PREVIEW", "OPTIMIZED", "COVER", "KEYFRAME", "AUDIO_EXTRACT"],
   })
-  variantType!: "THUMBNAIL" | "TRANSCODE" | "PREVIEW" | "OPTIMIZED" | "COVER";
+  variantType!: "THUMBNAIL" | "TRANSCODE" | "PREVIEW" | "OPTIMIZED" | "COVER" | "KEYFRAME" | "AUDIO_EXTRACT";
 
   @ApiProperty({ description: "MIME type of the variant" })
   mimeType!: string;

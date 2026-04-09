@@ -56,20 +56,22 @@ export class ShareService {
     async getPromptList() {
         const prompts = await this.prisma.decorator.findMany({
             where: { type: "PROMPT" },
-            take: 6,
             select: {
                 id: true,
                 label: true,
             }
-        })
+        });
 
-        return prompts;
+        return prompts
+            .sort(() => Math.random() - 0.5)
+            .slice(0, 6);
     }
 
     async getLocationFromCoordinates(lat: number, lng: number) {
         const cacheKey = `share:location:${lat.toFixed(2)}:${lng.toFixed(2)}`;
         const cached = await this.cache.get<{ city?: string; state?: string }>(cacheKey);
         if (cached) return cached;
+        console.log(`Cache miss for location ${lat}, ${lng}. Fetching from Google Places API...`);
 
         const result = await this.googlePlaces.reverseGeocode(lat, lng);
         const location = { city: result.city, state: result.state };

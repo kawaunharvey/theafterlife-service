@@ -15,7 +15,8 @@
     "training:jsonl:parse": "tsx scripts/training/generate-parse-training-jsonl.ts",
     "lint": "biome check src --fix",
     "build": "nest build",
-    "start": "node ./dist/main.js"
+    "start": "node ./dist/main.js",
+    "seed:apikeys": "tsx prisma/seeds/api-keys.seed.ts"
   },
   "dependencies": {
     "@langchain/core": "^1.1.29",

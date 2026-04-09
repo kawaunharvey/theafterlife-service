@@ -208,6 +208,6 @@ export class MemorialsService {
   }
 
   async memorialShareLinkFromSlug(slug: string): Promise<string> {
-    return `https://share.welcometotheafterlife.app/memorial/${slug}`;
+    return `https://share.welcometotheafterlife.app/m/${slug}`;
   }
 }

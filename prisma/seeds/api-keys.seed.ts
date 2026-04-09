@@ -57,8 +57,16 @@ async function main() {
     rateLimit: 1000,
   });
 
+  const share = await createApiKey({
+    name: "Initial Share Key",
+    description: "Bootstrap share key for managing API keys",
+    permissions: ["admin"],
+    rateLimit: 1000,
+  });
+
   console.log("\n--- Generated API Keys (store these securely) ---");
   console.log(`API_KEY=${admin.apiKey}  (id: ${admin.apiKeyId})`);
+  console.log(`API_KEY=${share.apiKey}  (id: ${share.apiKeyId})`);
   console.log("--------------------------------------------------\n");
 }
 

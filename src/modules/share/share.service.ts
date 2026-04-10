@@ -117,7 +117,8 @@ export class ShareService {
             body: dto.body,
             lat: dto.lat,
             lng: dto.lng,
-            assetIds: dto.media,
+            assetIds: dto.media?.map(m => m.assetId) ?? [],
+            mediaUrls: dto.media?.map(m => m.url) ?? [],
             prompt: dto.prompt,
             visibility: dto.visibility,
         });

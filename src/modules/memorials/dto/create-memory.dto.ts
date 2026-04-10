@@ -37,6 +37,11 @@ export class CreateMemoryDto {
   assetIds?: string[];
 
   @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  mediaUrls?: string[];
+
+  @IsOptional()
   @IsEnum(Visibility)
   visibility?: Visibility;
 

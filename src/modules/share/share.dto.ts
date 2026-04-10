@@ -3,14 +3,25 @@ import {
   IsEmail,
   IsEnum,
   IsNumber,
+  IsObject,
   IsOptional,
   IsString,
   Max,
   MaxLength,
   Min,
   MinLength,
+  ValidateNested,
 } from "class-validator";
+import { Type } from "class-transformer";
 import { MemorialRelationshipKind, Visibility } from "@prisma/client";
+
+export class MediaItemDto {
+  @IsString()
+  assetId: string;
+
+  @IsString()
+  url: string;
+}
 
 export class SubmitShareMemoryDto {
   @IsEmail()
@@ -36,8 +47,9 @@ export class SubmitShareMemoryDto {
 
   @IsOptional()
   @IsArray()
-  @IsString({ each: true })
-  media?: string[];
+  @ValidateNested({ each: true })
+  @Type(() => MediaItemDto)
+  media?: MediaItemDto[];
 
   @IsOptional()
   @IsString()

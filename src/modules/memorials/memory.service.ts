@@ -60,10 +60,12 @@ export class MemoryService {
 
     const relationshipKind = (relationship?.relationship ?? MemorialRelationshipKind.IMMEDIATE_FAMILY) as MemorialRelationshipKind;
 
-    const media = (dto.assetIds ?? []).map((assetId) => ({
-      mediaType: isVideoUrl(assetId) ? "video" : "image",
+    const assetIds = dto.assetIds ?? [];
+    const mediaUrls = dto.mediaUrls ?? [];
+    const media = assetIds.map((assetId, index) => ({
+      mediaType: mediaUrls[index] ? (isVideoUrl(mediaUrls[index]) ? "video" : "image") : "image",
       assetId,
-      url: assetId,
+      url: mediaUrls[index] ?? assetId,
     }));
 
     const memory = await this.prisma.memory.create({
